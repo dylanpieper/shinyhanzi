@@ -1,0 +1,32 @@
+Package: shinyhanzi
+Title: Explore Chinese Characters with Animated Stroke Order and
+    Dictionary Lookup
+Version: 0.1.0
+Authors@R: 
+    person("Dylan", "Pieper", , "dylanpieper@gmail.com", role = c("aut", "cre"))
+Description: A Shiny application for exploring Chinese characters with
+    animated stroke order, character decomposition, dictionary lookup with
+    pinyin, English to Hanzi search, and frequency analysis. Includes
+    reusable helper functions for Hanzi NLP backed by a DuckDB database.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+Suggests:
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+Imports:
+    bslib (>= 0.7.0),
+    cli,
+    DBI,
+    dplyr,
+    duckdb (>= 0.10.0),
+    hanyupinyin,
+    httr2 (>= 1.0.0),
+    jsonlite,
+    purrr,
+    readr,
+    rlang,
+    shiny (>= 1.8.0),
+    stringi,
+    stringr
+Config/roxygen2/version: 8.0.0

@@ -1,0 +1,96 @@
+test_that("parse_makemeahanzi parses entries correctly", {
+  fixture <- paste(
+    '{"character":"有","definition":"have / possess","pinyin":["yǒu"],"radical":"月","decomposition":"⿱𠂇月","etymology":{"type":"ideographic","hint":"To hold 𠂇 the moon 月 — meaning possession"}}',
+    '{"character":"青","definition":"green / blue","pinyin":["qīng"],"radical":"青","decomposition":"⿱⺼月","etymology":{"type":"pictophonetic","phonetic":"月","semantic":"生"}}',
+    '{"character":"好","definition":"good","pinyin":["hǎo","hào"],"radical":"女","decomposition":"⿰女子","etymology":{"type":"ideographic"}}',
+    sep = "\n"
+  )
+  tmp <- tempfile(fileext = ".txt")
+  writeLines(fixture, tmp)
+  on.exit(unlink(tmp))
+
+  result <- shinyhanzi:::parse_makemeahanzi(tmp)
+
+  expect_named(result, c("characters", "readings"))
+  expect_equal(nrow(result$characters), 3L)
+  expect_true("char"           %in% names(result$characters))
+  expect_true("etymology_type" %in% names(result$characters))
+  expect_true("phonetic"       %in% names(result$characters))
+
+  # Multiple readings
+  hao_readings <- result$readings[result$readings$char == "好", ]
+  expect_equal(nrow(hao_readings), 2L)
+  expect_true(hao_readings$is_primary[[1]])
+  expect_false(hao_readings$is_primary[[2]])
+})
+
+test_that("parse_cedict parses entries correctly", {
+  fixture <- paste(
+    "# CC-CEDICT",
+    "有 有 [you3] /to have/there is/",
+    "好 好 [hao3] /good/well/proper/",
+    "好 好 [hao4] /to be fond of/to have a tendency to/",
+    "電話 电话 [dian4 hua4] /telephone/phone call/",
+    "u:hen 于人 [u:hen1] /test u-umlaut/",
+    sep = "\n"
+  )
+  tmp <- tempfile(fileext = ".txt")
+  writeLines(fixture, tmp, useBytes = TRUE)
+  on.exit(unlink(tmp))
+
+  result <- shinyhanzi:::parse_cedict(tmp)
+  df     <- result$entries
+
+  expect_true("id"          %in% names(df))
+  expect_true("simplified"  %in% names(df))
+  expect_true("is_word"     %in% names(df))
+  expect_true("gloss"       %in% names(df))
+
+  # 电话 is a word (nchar > 1)
+  dianhua <- df[df$simplified == "电话", ]
+  expect_true(nrow(dianhua) >= 1)
+  expect_true(dianhua$is_word[[1]])
+
+  # Single characters are not words
+  you_row <- df[df$simplified == "有", ]
+  expect_false(you_row$is_word[[1]])
+})
+
+test_that("parse_cjk_decomp handles atoms and intermediates", {
+  fixture <- paste(
+    "一:a()",
+    "好:c(女,子)",
+    "有:c(𠂇,月)",
+    "00001:p(一,丨)",
+    sep = "\n"
+  )
+  tmp <- tempfile(fileext = ".txt")
+  writeLines(fixture, tmp, useBytes = TRUE)
+  on.exit(unlink(tmp))
+
+  df <- shinyhanzi:::parse_cjk_decomp(tmp)
+
+  expect_true("char"            %in% names(df))
+  expect_true("comp_index"      %in% names(df))
+  expect_true("is_intermediate" %in% names(df))
+
+  # Atom: 一 has comp_index == 0 and no component
+  yi <- df[df$char == "一", ]
+  expect_equal(yi$comp_index[[1]], 0L)
+  expect_true(is.na(yi$component[[1]]))
+
+  # Intermediate token
+  inter <- df[df$char == "00001", ]
+  expect_true(all(inter$is_intermediate))
+})
+
+test_that("numbered_to_toned converts correctly", {
+  expect_equal(shinyhanzi:::numbered_to_toned("hao3"), "hǎo")
+  expect_equal(shinyhanzi:::numbered_to_toned("ni3 hao3"), "nǐ hǎo")
+  expect_equal(shinyhanzi:::numbered_to_toned("lü4"), "lǜ")
+})
+
+test_that("toned_to_numbered converts correctly", {
+  expect_equal(shinyhanzi:::toned_to_numbered("hǎo"), "hao3")
+  expect_equal(shinyhanzi:::toned_to_numbered("nǐ hǎo"), "ni3 hao3")
+})
