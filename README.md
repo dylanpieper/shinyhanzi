@@ -11,7 +11,7 @@ pak::pak("dylanpieper/shinyhanzi")
 
 ## Getting started
 
-shinyhanzi requires a database (115 MB) that is downloaded separately. Download it once and it will be cached for all future sessions:
+shinyhanzi requires a database (114 MB) that is downloaded separately. Download it once and it will be cached for all future sessions:
 
 ``` r
 library(shinyhanzi)
@@ -53,10 +53,10 @@ hanzi_search("hao3", n = 3)
 #> 3         找          找         zhǎo  to try to find / to look for …       466
 
 hanzi_search("good", n = 3)  # English search also works
-#>   simplified traditional pinyin_toned                             gloss    score freq_rank
-#> 1         良          良        liáng               good / very / very much 3.236111       835
-#> 2         还          還          hái  still / still in progress / …        1.960092        80
-#> 3         美          美          měi  beautiful / very satisfactory…        1.960092       151
+#>   simplified traditional pinyin_toned                            gloss    score freq_rank
+#> 1         良          良        liáng              good / very / very much 3.234724       835
+#> 2         还          還          hái  still / still in progress / …       1.959329        80
+#> 3         美          美          měi  beautiful / very satisfactory…       1.959329       151
 ```
 
 ### Decompose a character
@@ -74,16 +74,20 @@ hanzi_decompose("好")
 
 ``` r
 hanzi_components_of("女")
-#> # A tibble: 6 × 2
-#>   char   rank
-#>   <chr> <int>
-#> 1 要        26
-#> 2 如        67
-#> 3 好        82
-#> 4 她        91
-#> 5 数       231
-#> 6 安       232
-#> # … with more rows
+#> # A tibble: 249 × 2
+#>    char   rank
+#>    <chr> <int>
+#>  1 要       26
+#>  2 如       67
+#>  3 好       82
+#>  4 她       91
+#>  5 数      231
+#>  6 安      232
+#>  7 接      247
+#>  8 始      381
+#>  9 委      457
+#> 10 案      518
+#> # ℹ 239 more rows
 ```
 
 ### Get pinyin for a character
