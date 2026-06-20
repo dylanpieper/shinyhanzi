@@ -90,6 +90,22 @@ test_that("numbered_to_toned converts correctly", {
   expect_equal(shinyhanzi:::numbered_to_toned("lü4"), "lǜ")
 })
 
+test_that("numbered_to_toned places the mark per Hanyu Pinyin rules", {
+  # 'a'/'e' always win.
+  expect_equal(shinyhanzi:::numbered_to_toned("xie4"), "xiè")
+  expect_equal(shinyhanzi:::numbered_to_toned("yue4"), "yuè")
+  # "ou" marks the o.
+  expect_equal(shinyhanzi:::numbered_to_toned("ou1"), "ōu")
+  # Otherwise the *last* vowel: uo/ui mark o/i, but iu marks u.
+  expect_equal(shinyhanzi:::numbered_to_toned("guo2"), "guó")
+  expect_equal(shinyhanzi:::numbered_to_toned("gui4"), "guì")
+  expect_equal(shinyhanzi:::numbered_to_toned("shui3"), "shuǐ")
+  expect_equal(shinyhanzi:::numbered_to_toned("liu2"), "liú")
+  # Neutral tone (5) leaves the syllable unmarked; multi-syllable round-trips.
+  expect_equal(shinyhanzi:::numbered_to_toned("zhong1 guo2"), "zhōng guó")
+  expect_equal(shinyhanzi:::numbered_to_toned("dui4 bu5 qi3"), "duì bu qǐ")
+})
+
 test_that("toned_to_numbered converts correctly", {
   expect_equal(shinyhanzi:::toned_to_numbered("hǎo"), "hao3")
   expect_equal(shinyhanzi:::toned_to_numbered("nǐ hǎo"), "ni3 hao3")

@@ -446,18 +446,22 @@ numbered_to_toned <- function(x) {
     if (!grepl("[1-5]$", syl)) return(syl)
     tone <- substr(syl, nchar(syl), nchar(syl))
     body <- substr(syl, 1, nchar(syl) - 1)
-    vowels <- c("a", "e", "ou", "\u00fc", "u", "i", "o")
-    marked <- body
-    for (v in vowels) {
-      if (grepl(v, body, fixed = TRUE)) {
-        key <- paste0(v, tone)
-        if (!is.na(TONED_VOWELS[key])) {
-          marked <- sub(v, TONED_VOWELS[[key]], body, fixed = TRUE)
-          break
-        }
-      }
+    # Hanyu Pinyin tone placement: an 'a' or 'e' always carries the mark; in the
+    # "ou" cluster the 'o' carries it; otherwise the *last* vowel carries it
+    # (so guo->gu\u00f3, gui->gu\u00ec, but iu->li\u00fa). Find the target vowel position, then
+    # substitute at that position to avoid marking an earlier same-letter vowel.
+    pos <- regexpr("a", body, fixed = TRUE)
+    if (pos == -1L) pos <- regexpr("e", body, fixed = TRUE)
+    if (pos == -1L) pos <- regexpr("ou", body, fixed = TRUE)  # marks the 'o'
+    if (pos == -1L) {
+      m <- gregexpr("[iou\u00fc]", body)[[1]]
+      pos <- if (m[1] == -1L) -1L else m[length(m)]
     }
-    marked
+    if (pos == -1L) return(body)
+    target <- substr(body, pos, pos)
+    repl <- TONED_VOWELS[[paste0(target, tone)]]
+    if (is.null(repl) || is.na(repl)) return(body)
+    paste0(substr(body, 1, pos - 1), repl, substr(body, pos + 1, nchar(body)))
   }, character(1))
   paste(toned, collapse = " ")
 }

@@ -1,0 +1,53 @@
+# Run R CMD check (incl. testthat) on push and pull request.
+# The lookup/search/decompose tests need the prebuilt DuckDB database, which is
+# not shipped in the repo. We download it from the GitHub Releases asset into the
+# package's user cache dir before checking; if the release is unavailable the
+# DB-backed tests skip gracefully (see tests/testthat/helper-db.R).
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+name: R-CMD-check
+
+permissions: read-all
+
+jobs:
+  R-CMD-check:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      R_KEEP_PKG_SOURCE: yes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::rcmdcheck
+          needs: check
+
+      - name: Download prebuilt hanzi database
+        shell: Rscript {0}
+        run: |
+          url <- "https://github.com/dylanpieper/shinyhanzi/releases/latest/download/shinyhanzi.duckdb"
+          dir <- tools::R_user_dir("shinyhanzi", "data")
+          dir.create(dir, recursive = TRUE, showWarnings = FALSE)
+          dest <- file.path(dir, "shinyhanzi.duckdb")
+          ok <- tryCatch({
+            download.file(url, dest, mode = "wb", quiet = TRUE)
+            file.exists(dest) && file.size(dest) > 0
+          }, error = function(e) {
+            message("DB download failed (", conditionMessage(e),
+                    "); DB-backed tests will skip.")
+            FALSE
+          })
+          cat("hanzi DB available:", ok, "\n")
+
+      - uses: r-lib/actions/check-r-package@v2
+        with:
+          upload-snapshots: true
