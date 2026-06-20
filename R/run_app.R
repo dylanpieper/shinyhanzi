@@ -1022,7 +1022,7 @@ render_stats_modal <- function(char, stats) {
         class = "d-flex align-items-center gap-2",
         shiny::tags$span(rad_char, class = "hanzi-tile border fs-5"),
         shiny::tags$span(
-          sprintf("%s · %s · #%s",
+          sprintf("%s \u00b7 %s \u00b7 #%s",
                   ri$meaning[[1]],
                   numbered_to_toned(ri$pinyin[[1]]),
                   ri$number[[1]]),
@@ -1112,7 +1112,7 @@ browse_server <- function(id, navigate, con, session_parent) {
       dir <- desc()
       r1  <- if (!dir) (p - 1L) * PAGE + 1L else total - (p - 1L) * PAGE
       r2  <- if (!dir) min(p * PAGE, total)  else max(total - p * PAGE + 1L, 1L)
-      sprintf("Rank %s–%s", formatC(min(r1,r2), big.mark=","), formatC(max(r1,r2), big.mark=","))
+      sprintf("Rank %s\u2013%s", formatC(min(r1,r2), big.mark=","), formatC(max(r1,r2), big.mark=","))
     })
 
     shiny::observeEvent(input$toggle_order, {
@@ -1133,7 +1133,7 @@ browse_server <- function(id, navigate, con, session_parent) {
         # First semicolon-delimited sense only, truncated
         gloss <- if (!is.na(row$gloss %||% NA)) {
           g <- trimws(strsplit(row$gloss, ";")[[1L]][[1L]])
-          if (nchar(g) > 38) paste0(substr(g, 1L, 38), "…") else g
+          if (nchar(g) > 38) paste0(substr(g, 1L, 38), "\u2026") else g
         } else ""
 
         shiny::div(
