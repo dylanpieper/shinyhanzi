@@ -232,8 +232,8 @@ app_server <- function(con) {
       if (length(chars) <= 1L) return(NULL)
 
       wd <- char_data()
-      if (is.null(wd) || nrow(wd$entries) == 0L) return(NULL)
-      row <- wd$entries[1L, ]
+      if (is.null(wd) || nrow(wd$cedict) == 0L) return(NULL)
+      row <- wd$cedict[1L, ]
 
       shiny::div(
         class = "d-flex align-items-start gap-3 mt-2",
@@ -646,7 +646,7 @@ dict_server <- function(
       data <- if (is_word) focused_data() else char_data()
       lookup <- if (is_word) focused_char() else s
       shiny::req(!is.null(data))
-      entries <- data$entries
+      entries <- data$cedict
 
       if (nrow(entries) == 0) {
         return(shiny::tagList(

@@ -12,18 +12,18 @@ hanzi_lookup(char, con = hanzi_db())
 \item{con}{A DuckDB connection from \code{\link[=hanzi_db]{hanzi_db()}}.}
 }
 \value{
-A named list with elements:
+A named list with three elements:
 \itemize{
 \item \code{char}: the input character
-\item \code{definition}: makemeahanzi short definition
-\item \code{radical}: the character's radical
-\item \code{etymology_type}: "ideographic", "pictographic", or "pictophonetic"
-\item \code{phonetic}, \code{semantic}, \code{etymology_hint}: etymology fields
-\item \code{entries}: data frame of CC-CEDICT rows (pinyin_toned, pinyin_numbered, gloss, traditional, is_word)
-\item \code{primary_pinyin}: toned pinyin of the primary reading
+\item \code{mmah}: list of makemeahanzi fields — \code{definition}, \code{radical},
+\code{etymology_type}, \code{phonetic}, \code{semantic}, \code{etymology_hint}
+\item \code{cedict}: data frame of CC-CEDICT rows (\code{traditional}, \code{pinyin_toned},
+\code{pinyin_numbered}, \code{gloss}, \code{is_word})
 }
+
+To get the primary pinyin reading use \code{\link[=hanzi_pinyin]{hanzi_pinyin()}}.
 }
 \description{
-Returns dictionary entries, pinyin readings, radical, and etymology
-information for a single character.
+Returns dictionary entries and character metadata for a single character,
+organised by data source.
 }

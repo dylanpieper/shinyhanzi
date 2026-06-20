@@ -29,13 +29,10 @@ Beyond the app, shinyhanzi exposes several functions for working with Chinese ch
 ``` r
 result <- hanzi_lookup("好")
 
-result$primary_pinyin
-#> [1] "hǎo"
-
-result$definition
+result$mmah$definition
 #> [1] "good, excellent, fine; proper, suitable; well"
 
-result$entries
+result$cedict
 #> # A tibble: 2 × 5
 #>   traditional pinyin_toned pinyin_numbered gloss                         is_word
 #>   <chr>       <chr>        <chr>           <chr>                         <lgl>
