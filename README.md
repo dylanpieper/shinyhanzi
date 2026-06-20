@@ -44,16 +44,16 @@ result$cedict
 
 ``` r
 hanzi_search("hao3", n = 3)
-#>   simplified traditional pinyin_toned                             gloss freq_rank
+#>   simplified traditional pinyin_toned  gloss                          freq_rank
 #> 1         好          好          hǎo  good / appropriate; proper / …        82
 #> 2         少          少         shǎo  few / less / to lack / to be …       233
 #> 3         找          找         zhǎo  to try to find / to look for …       466
 
-hanzi_search("good", n = 3)  # English search also works
-#>   simplified traditional pinyin_toned                            gloss    score freq_rank
-#> 1         良          良        liáng              good / very / very much 3.234724       835
-#> 2         还          還          hái  still / still in progress / …       1.959329        80
-#> 3         美          美          měi  beautiful / very satisfactory…       1.959329       151
+hanzi_search("good", n = 3)
+#>   simplified traditional pinyin_toned  gloss                             score freq_rank
+#> 1         良          良        liáng  good / very / very much        3.234724       835
+#> 2         还          還          hái  still / still in progress / …  1.959329        80
+#> 3         美          美          měi  beautiful / very satisfactory… 1.959329       151
 ```
 
 ### Decompose a character
