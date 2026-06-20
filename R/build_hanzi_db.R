@@ -22,6 +22,36 @@ build_hanzi_db <- function(
     out_path    = file.path(cache_dir(), "shinyhanzi.duckdb"),
     sources_dir = NULL,
     overwrite   = FALSE) {
+  # ---------------------------------------------------------------------------
+  # Maintainer workflow: re-uploading the DB to GitHub Releases after a rebuild
+  # ---------------------------------------------------------------------------
+  # download_hanzi_db() pulls shinyhanzi.duckdb from the latest GitHub Release
+  # asset, so after rebuilding the DB the release asset must be replaced. Run
+  # the following from R / a shell (credentials are read from the macOS keychain
+  # via `git credential fill`, the same flow used for the v0.1.0 upload):
+  #
+  #   # 1. Rebuild the DB into the user cache
+  #   build_hanzi_db(overwrite = TRUE)
+  #
+  #   # 2. Authenticate (GitHub token from the keychain)
+  #   TOKEN=$(printf 'protocol=https\nhost=github.com\n\n' \
+  #     | git credential fill | sed -n 's/^password=//p')
+  #   REPO=dylanpieper/shinyhanzi
+  #   DB="$HOME/Library/Application Support/org.R-project.R/R/shinyhanzi/shinyhanzi.duckdb"
+  #
+  #   # 3. Find the latest release and the existing asset id
+  #   REL=$(curl -s -H "Authorization: Bearer $TOKEN" \
+  #     "https://api.github.com/repos/$REPO/releases/latest")
+  #   RELEASE_ID=$(echo "$REL" | jq -r '.id')
+  #   ASSET_ID=$(echo "$REL" | jq -r '.assets[] | select(.name=="shinyhanzi.duckdb") | .id')
+  #
+  #   # 4. Delete the old asset, then upload the rebuilt DB
+  #   curl -s -X DELETE -H "Authorization: Bearer $TOKEN" \
+  #     "https://api.github.com/repos/$REPO/releases/assets/$ASSET_ID"
+  #   curl -s -X POST -H "Authorization: Bearer $TOKEN" \
+  #     -H "Content-Type: application/octet-stream" --data-binary @"$DB" \
+  #     "https://uploads.github.com/repos/$REPO/releases/$RELEASE_ID/assets?name=shinyhanzi.duckdb"
+  # ---------------------------------------------------------------------------
   if (file.exists(out_path) && !overwrite) {
     cli::cli_abort(
       "Database already exists at {out_path}. Use `overwrite = TRUE` to rebuild."
