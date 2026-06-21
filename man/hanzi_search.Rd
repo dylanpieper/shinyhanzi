@@ -17,7 +17,7 @@ inverse log of character frequency rank so common characters surface first.}
 \item{con}{A DuckDB connection from \code{\link[=hanzi_db]{hanzi_db()}}.}
 }
 \value{
-A data frame with columns \code{simplified}, \code{traditional}, \code{pinyin_toned},
+A tibble with columns \code{simplified}, \code{traditional}, \code{pinyin_toned},
 \code{gloss}, \code{score}, \code{freq_rank}.
 }
 \description{

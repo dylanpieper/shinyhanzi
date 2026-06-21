@@ -9,7 +9,7 @@
 #' @param reweight_by_frequency If `TRUE`, BM25 scores are multiplied by the
 #'   inverse log of character frequency rank so common characters surface first.
 #' @param con A DuckDB connection from [hanzi_db()].
-#' @return A data frame with columns `simplified`, `traditional`, `pinyin_toned`,
+#' @return A tibble with columns `simplified`, `traditional`, `pinyin_toned`,
 #'   `gloss`, `score`, `freq_rank`.
 #' @export
 hanzi_search <- function(query, n = 20L, reweight_by_frequency = TRUE,
@@ -120,10 +120,10 @@ hanzi_search <- function(query, n = 20L, reweight_by_frequency = TRUE,
   # ---- Merge --------------------------------------------------------------
   # FTS hits first (English relevance), then pinyin-only hits by frequency
   combined <- do.call(rbind, Filter(function(d) is.data.frame(d) && nrow(d) > 0, results))
-  if (is.null(combined) || nrow(combined) == 0) return(data.frame())
+  if (is.null(combined) || nrow(combined) == 0) return(tibble::tibble())
 
   # Deduplicate: keep first occurrence per (simplified, pinyin_toned) pair
   key <- paste(combined$simplified, combined$pinyin_toned, sep = "")
   combined <- combined[!duplicated(key), ]
-  combined[seq_len(min(nrow(combined), as.integer(n))), ]
+  tibble::as_tibble(combined[seq_len(min(nrow(combined), as.integer(n))), ])
 }

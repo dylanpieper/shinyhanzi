@@ -29,5 +29,6 @@ Imports:
     rlang,
     shiny (>= 1.8.0),
     stringi,
-    stringr
+    stringr,
+    tibble
 Config/roxygen2/version: 8.0.0
