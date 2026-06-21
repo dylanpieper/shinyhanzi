@@ -2,7 +2,7 @@
 % Please edit documentation in R/hanzi_decompose.R
 \name{hanzi_decompose}
 \alias{hanzi_decompose}
-\title{Decompose a Chinese character into its components}
+\title{Break a Chinese character into its meaningful components}
 \usage{
 hanzi_decompose(
   char,
@@ -13,16 +13,25 @@ hanzi_decompose(
 \arguments{
 \item{char}{A single Chinese character.}
 
-\item{level}{One of \code{"once"} (direct split), \code{"radical"} (down to radical
-components), or \code{"graphical"} (down to pictorial primitives).}
+\item{level}{One of \code{"once"} (the character's meaningful components — the
+semantic/phonetic parts of a phono-semantic character, or the components
+named in its etymology), \code{"radical"}, or \code{"graphical"} (structural
+breakdown from the \code{components} table).}
 
 \item{con}{A DuckDB connection from \code{\link[=hanzi_db]{hanzi_db()}}.}
 }
 \value{
 A data frame with columns \code{component}, \code{is_intermediate}, \code{definition}
-(component gloss), \code{radical_name} (if the component is a Kangxi radical).
+(component gloss), \code{radical_name} (if the component is a Kangxi radical), and
+\code{role} (\code{"semantic"}/\code{"phonetic"} for the 形符/聲符 of a phono-semantic
+character, otherwise \code{NA}). The character's etymology is attached as an
+attribute \code{attr(., "etymology")}: a list with \code{type}, \code{semantic},
+\code{phonetic}, and \code{hint}.
 }
 \description{
-Returns the components of a character at one of three decomposition levels,
-with English glosses and radical labels.
+Returns the components that actually carry meaning or sound, with English
+glosses and radical labels. For a phono-semantic character these are its
+形符 (semantic) and 聲符 (phonetic) parts; for other characters they are the
+components named in its etymology. The raw graphical stroke split is never
+returned — it carries no reliable meaning or sound and can mislead learners.
 }

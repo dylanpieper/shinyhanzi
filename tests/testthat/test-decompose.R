@@ -17,9 +17,52 @@ test_that("hanzi_decompose splits 好 into 女 + 子", {
   expect_match(woman$definition, "woman", ignore.case = TRUE)
 })
 
-test_that("hanzi_decompose returns no components for an atomic radical", {
+test_that("hanzi_decompose tags 形符/聲符 roles for a phono-semantic char", {
   con <- local_hanzi_db()
-  # 一 (one) is a single stroke with no sub-components.
+  res <- shinyhanzi::hanzi_decompose("清", "once", con = con)
+
+  expect_true("role" %in% names(res))
+  # 清 = 氵 (water, semantic 形符) + 青 (qing, phonetic 聲符).
+  expect_identical(res$role[res$component == "氵"], "semantic")
+  expect_identical(res$role[res$component == "青"], "phonetic")
+
+  etym <- attr(res, "etymology")
+  expect_identical(etym$type, "pictophonetic")
+  expect_identical(etym$semantic, "氵")
+  expect_identical(etym$phonetic, "青")
+})
+
+test_that("hanzi_decompose leaves roles NA for an associative compound", {
+  con <- local_hanzi_db()
+  res <- shinyhanzi::hanzi_decompose("好", "once", con = con)
+
+  expect_true(all(is.na(res$role)))
+  expect_identical(attr(res, "etymology")$type, "ideographic")
+})
+
+test_that("hanzi_decompose returns the etymological parts, not the stroke split", {
+  con <- local_hanzi_db()
+
+  # 光 is written ⺌ + 兀 but comes from 儿 (person) + 火 (fire). We return the
+  # meaningful etymological components, never the misleading stroke chunks.
+  guang <- shinyhanzi::hanzi_decompose("光", "once", con = con)
+  expect_setequal(guang$component, c("儿", "火"))
+  expect_false(any(c("⺌", "兀") %in% guang$component))
+  expect_identical(attr(guang, "etymology")$type, "ideographic")
+})
+
+test_that("hanzi_decompose carries pictograph etymology with a hint", {
+  con <- local_hanzi_db()
+  res <- shinyhanzi::hanzi_decompose("日", "once", con = con)
+
+  etym <- attr(res, "etymology")
+  expect_identical(etym$type, "pictographic")
+  expect_true(!is.na(etym$hint) && nzchar(etym$hint))
+})
+
+test_that("hanzi_decompose extracts no components from an abstract hint", {
+  con <- local_hanzi_db()
+  # 一 (one): the hint names representations in parentheses, not real parts.
   res <- shinyhanzi::hanzi_decompose("一", "once", con = con)
   expect_s3_class(res, "data.frame")
   expect_equal(nrow(res), 0L)

@@ -122,7 +122,12 @@ build_hanzi_db <- function(
   cli::cli_h2("Building derived tables")
   build_word_chars_table(con)
   build_components_table(con)
-  build_ids_components_table(con)
+
+  # `decomposition` is only an intermediate for build_components_table, and the
+  # graphical stroke split (ids_components) is no longer used by the app — drop
+  # the intermediate so it doesn't ship in the released artifact.
+  DBI::dbExecute(con, "DROP TABLE IF EXISTS decomposition;")
+  DBI::dbExecute(con, "DROP TABLE IF EXISTS ids_components;")
 
   cli::cli_h2("Creating indexes")
   indexes <- c(
@@ -130,7 +135,6 @@ build_hanzi_db <- function(
     "CREATE INDEX IF NOT EXISTS idx_readings_char        ON readings(char);",
     "CREATE INDEX IF NOT EXISTS idx_cedict_simplified    ON cedict(simplified);",
     "CREATE INDEX IF NOT EXISTS idx_cedict_traditional   ON cedict(traditional);",
-    "CREATE INDEX IF NOT EXISTS idx_decomp_char          ON decomposition(char);",
     "CREATE INDEX IF NOT EXISTS idx_components_char      ON components(char);",
     "CREATE INDEX IF NOT EXISTS idx_components_component ON components(component);",
     "CREATE INDEX IF NOT EXISTS idx_word_chars_char      ON word_chars(char);",
@@ -302,36 +306,6 @@ parse_word_frequency <- function(path) {
 
   data.frame(word = word, rank = rank, count = count, band = band,
              stringsAsFactors = FALSE)
-}
-
-# IDS layout operators U+2FF0–U+2FFB; strip these to get bare components
-IDS_OPERATORS <- intToUtf8(0x2FF0:0x2FFB, multiple = TRUE)
-
-#' @keywords internal
-parse_ids_components <- function(ids) {
-  if (is.na(ids) || !nzchar(ids)) return(character(0))
-  chars <- strsplit(ids, "", fixed = TRUE)[[1]]
-  chars <- chars[!chars %in% IDS_OPERATORS]
-  chars <- nfc(chars)
-  chars[nzchar(chars)]
-}
-
-#' @keywords internal
-build_ids_components_table <- function(con) {
-  chars_df <- DBI::dbGetQuery(con, "SELECT char, decomposition FROM characters WHERE decomposition IS NOT NULL")
-  rows <- compact(map(seq_len(nrow(chars_df)), function(i) {
-    ch    <- chars_df$char[[i]]
-    comps <- parse_ids_components(chars_df$decomposition[[i]])
-    comps <- comps[comps != ch]           # exclude self-reference
-    if (!length(comps)) return(NULL)
-    data.frame(char = ch, component = comps, position = seq_along(comps),
-               stringsAsFactors = FALSE)
-  }))
-  ids_tbl <- dplyr::bind_rows(rows)
-  DBI::dbWriteTable(con, "ids_components", ids_tbl, overwrite = TRUE)
-  DBI::dbExecute(con, "CREATE INDEX IF NOT EXISTS idx_ids_char ON ids_components(char);")
-  cli::cli_alert_success("ids_components: {nrow(ids_tbl)} rows")
-  invisible(NULL)
 }
 
 # ---- Derived table builders -------------------------------------------------

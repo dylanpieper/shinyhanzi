@@ -137,7 +137,6 @@ app_ui <- function() {
       # Right: dict + decomp + appears-in
       shiny::tagList(
         dict_ui("dict"),
-        decomp_ui("decomp"),
         appears_in_ui("appears_in")
       )
     )
@@ -211,10 +210,6 @@ app_server <- function(con) {
       shiny::req(focused_char())
       hanzi_lookup(focused_char(), con)
     })
-    focused_decomp <- shiny::reactive({
-      shiny::req(focused_char())
-      hanzi_decompose(focused_char(), "once", con)
-    })
     focused_appears <- shiny::reactive({
       shiny::req(focused_char())
       hanzi_components_of(focused_char(), con = con)
@@ -236,19 +231,32 @@ app_server <- function(con) {
       row <- wd$cedict[1L, ]
 
       shiny::div(
-        class = "d-flex align-items-start gap-3 mt-2",
+        class = "dict-entry-clickable d-flex align-items-start gap-3 mt-2 py-2 px-2",
+        onclick = sprintf(
+          "Shiny.setInputValue('word_stats_request','%s',{priority:'event'})",
+          gsub("'", "\\\\'", s)
+        ),
         shiny::tags$span(s, class = "hanzi-large"),
         shiny::div(
+          class = "flex-grow-1",
           shiny::div(
             class = "d-flex align-items-center gap-2 mb-1",
             shiny::tags$strong(row$pinyin_toned[[1L]], class = "text-primary"),
-            shiny::tags$button(
-              type    = "button",
-              class   = "btn btn-link p-0 text-primary",
-              title   = "Speak",
-              onclick = sprintf("window.speakHanzi(%s, 0.9)",
-                                jsonlite::toJSON(s, auto_unbox = TRUE)),
-              shiny::icon("volume-high")
+            shiny::div(
+              class = "d-flex align-items-center gap-2 ms-auto",
+              shiny::tags$span(
+                shiny::icon("circle-info"),
+                class = "text-muted dict-info-icon",
+                title = "Word info"
+              ),
+              shiny::tags$button(
+                type    = "button",
+                class   = "btn btn-link p-0 text-primary",
+                title   = "Speak",
+                onclick = sprintf("event.stopPropagation(); window.speakHanzi(%s, 0.9)",
+                                  jsonlite::toJSON(s, auto_unbox = TRUE)),
+                shiny::icon("volume-high")
+              )
             )
           ),
           shiny::tags$span(
@@ -268,7 +276,6 @@ app_server <- function(con) {
       focused_data,
       session
     )
-    decomp_server("decomp", focused_char, focused_decomp, navigate)
     appears_in_page_size <- shiny::reactive({
       ps <- input$appears_in_page_size
       if (is.null(ps) || ps < 1L) 12L else as.integer(ps)
@@ -371,8 +378,32 @@ app_server <- function(con) {
       if (is.null(ch) || !nzchar(ch)) {
         return()
       }
-      stats <- hanzi_char_stats(ch, con)
-      shiny::showModal(render_stats_modal(ch, stats))
+      stats  <- hanzi_char_stats(ch, con)
+      decomp <- hanzi_decompose(ch, "once", con)
+      shiny::showModal(render_stats_modal(ch, stats, decomp))
+    })
+
+    # Word/char info modal — triggered by clicking a search result or word title.
+    # Single characters route to the character modal; words to the word modal.
+    shiny::observeEvent(input$word_stats_request, {
+      tok <- input$word_stats_request
+      shiny::req(!is.null(tok) && nzchar(tok))
+      if (nchar(tok) == 1L) {
+        shiny::showModal(render_stats_modal(
+          tok, hanzi_char_stats(tok, con), hanzi_decompose(tok, "once", con)
+        ))
+      } else {
+        shiny::showModal(render_word_modal(tok, hanzi_word_stats(tok, con)))
+      }
+    })
+
+    # Clicking a component tile inside the modal starts a new search on it
+    shiny::observeEvent(input$modal_comp_click, {
+      ch <- input$modal_comp_click
+      shiny::req(!is.null(ch) && nzchar(ch))
+      shiny::removeModal()
+      navigate(ch)
+      shiny::updateTabsetPanel(session, "search_mode", selected = "Hanzi")
     })
 
     shiny::observeEvent(input$result_prev, {
@@ -410,19 +441,32 @@ app_server <- function(con) {
 
       shiny::div(
         shiny::div(
-          class = "d-flex align-items-start gap-3 mt-3 mb-3",
+          class = "dict-entry-clickable d-flex align-items-start gap-3 mt-3 mb-3 py-2 px-2",
+          onclick = sprintf(
+            "Shiny.setInputValue('word_stats_request','%s',{priority:'event'})",
+            gsub("'", "\\\\'", word)
+          ),
           shiny::tags$span(word, class = "hanzi-large"),
           shiny::div(
+            class = "flex-grow-1",
             shiny::div(
               class = "d-flex align-items-center gap-2 mb-1",
               shiny::tags$strong(row$pinyin_toned, class = "text-primary"),
-              shiny::tags$button(
-                type    = "button",
-                class   = "btn btn-link p-0 text-primary",
-                title   = "Speak",
-                onclick = sprintf("window.speakHanzi(%s, 0.9)",
-                                  jsonlite::toJSON(word, auto_unbox = TRUE)),
-                shiny::icon("volume-high")
+              shiny::div(
+                class = "d-flex align-items-center gap-2 ms-auto",
+                shiny::tags$span(
+                  shiny::icon("circle-info"),
+                  class = "text-muted dict-info-icon",
+                  title = "Word info"
+                ),
+                shiny::tags$button(
+                  type    = "button",
+                  class   = "btn btn-link p-0 text-primary",
+                  title   = "Speak",
+                  onclick = sprintf("event.stopPropagation(); window.speakHanzi(%s, 0.9)",
+                                    jsonlite::toJSON(word, auto_unbox = TRUE)),
+                  shiny::icon("volume-high")
+                )
               )
             ),
             shiny::tags$span(
@@ -680,6 +724,7 @@ dict_server <- function(
             ),
             shiny::div(
               class = "d-flex align-items-center gap-2",
+              shiny::tags$span(lookup, class = "hanzi-word"),
               shiny::tags$span(py, class = "fw-semibold text-primary"),
               if (!is.na(tr) && tr != lookup)
                 shiny::tags$span(paste0("(", tr, ")"), class = "text-muted small"),
@@ -708,82 +753,6 @@ dict_server <- function(
         })
       )
     })
-  })
-}
-
-# Decomposition
-decomp_ui <- function(id) {
-  ns <- shiny::NS(id)
-  bslib::card(
-    fill = FALSE,
-    bslib::card_header("Decomposition"),
-    bslib::card_body(shiny::uiOutput(ns("content")))
-  )
-}
-
-decomp_server <- function(id, current_char, decomp, navigate) {
-  shiny::moduleServer(id, function(input, output, session) {
-    output$content <- shiny::renderUI({
-      comps <- decomp()
-      shiny::req(!is.null(comps))
-      if (nrow(comps) == 0) {
-        return(shiny::p(
-          "No decomposition data available.",
-          class = "text-muted"
-        ))
-      }
-
-      shiny::div(
-        class = "d-flex flex-wrap gap-3 p-1",
-        lapply(seq_len(nrow(comps)), function(i) {
-          comp <- comps$component[[i]]
-          is_int <- comps$is_intermediate[[i]]
-          pinyin <- comps$pinyin_toned[[i]]
-          pinyin <- if (!is.null(pinyin) && !is.na(pinyin) && nzchar(pinyin)) {
-            pinyin
-          } else {
-            NULL
-          }
-          rname <- comps$radical_name[[i]]
-          defn <- comps$definition[[i]]
-          label <- if (!is.null(rname) && !is.na(rname) && nzchar(rname)) {
-            rname
-          } else if (!is.null(defn) && !is.na(defn) && nzchar(defn)) {
-            defn
-          } else {
-            NULL
-          }
-          shiny::div(
-            class = "decomp-tile text-center p-2",
-            if (is_int) {
-              shiny::tags$span(
-                comp,
-                class = "hanzi-tile border hanzi-intermediate"
-              )
-            } else {
-              shiny::tags$a(
-                href = "javascript:void(0)",
-                class = "hanzi-tile text-decoration-none text-body border",
-                comp,
-                onclick = sprintf(
-                  "Shiny.setInputValue('%s','%s',{priority:'event'})",
-                  session$ns("comp_click"),
-                  comp
-                )
-              )
-            },
-            if (!is.null(pinyin)) {
-              shiny::tags$div(pinyin, class = "small text-primary mt-1")
-            },
-            if (!is.null(label)) {
-              shiny::tags$div(label, class = "small text-muted")
-            }
-          )
-        })
-      )
-    })
-
-    shiny::observeEvent(input$comp_click, navigate(input$comp_click))
   })
 }
 
@@ -926,7 +895,7 @@ hanzi_char_stats <- function(char, con) {
   )
 }
 
-render_stats_modal <- function(char, stats) {
+render_stats_modal <- function(char, stats, decomp = NULL) {
   # Frequency section
   freq_ui <- if (!is.null(stats$freq)) {
     rank     <- stats$freq$rank[[1]]
@@ -950,63 +919,8 @@ render_stats_modal <- function(char, stats) {
     )
   }
 
-  # Etymology section
-  etym_ui <- if (!is.null(stats$info)) {
-    etype <- stats$info$etymology_type[[1]]
-    phon <- stats$info$phonetic[[1]]
-    sem <- stats$info$semantic[[1]]
-    hint <- stats$info$etymology_hint[[1]]
-
-    type_label <- switch(
-      etype %||% "",
-      pictographic  = "Pictographic",
-      ideographic   = "Ideographic",
-      pictophonetic = "Pictophonetic",
-      compound      = "Compound ideograph",
-      NULL
-    )
-
-    breakdown <- if (
-      !is.na(etype %||% NA) &&
-        etype == "pictophonetic" &&
-        (!is.na(sem %||% NA) || !is.na(phon %||% NA))
-    ) {
-      shiny::div(
-        class = "d-flex align-items-center gap-2 flex-wrap mt-2",
-        if (!is.na(sem %||% NA)) {
-          shiny::tagList(
-            shiny::tags$span(sem, class = "hanzi-tile border fs-5"),
-            shiny::tags$span("semantic", class = "text-muted small me-2")
-          )
-        },
-        if (!is.na(phon %||% NA)) {
-          shiny::tagList(
-            shiny::tags$span(phon, class = "hanzi-tile border fs-5"),
-            shiny::tags$span("phonetic", class = "text-muted small")
-          )
-        }
-      )
-    }
-
-    hint_ui <- if (!is.na(hint %||% NA) && nzchar(hint)) {
-      shiny::tags$p(hint, class = "text-muted small fst-italic mt-2 mb-0")
-    }
-
-    if (is.null(type_label) && is.null(hint_ui)) {
-      NULL
-    } else {
-      shiny::div(
-        class = "mb-4",
-        shiny::tags$p(
-          class = "text-muted text-uppercase small fw-semibold mb-1",
-          "Etymology"
-        ),
-        if (!is.null(type_label)) shiny::tags$p(type_label, class = "mb-0"),
-        breakdown,
-        hint_ui
-      )
-    }
-  }
+  # Etymology now lives in the always-visible Decomposition card (type, 形符/聲符
+  # roles, and origin hint), so the modal no longer repeats it here.
 
   # Radical section
   rad_ui <- if (!is.null(stats$rad) && !is.null(stats$info)) {
@@ -1032,6 +946,84 @@ render_stats_modal <- function(char, stats) {
     )
   }
 
+  # Composition section — type-aware meaningful components (clickable)
+  comp_ui <- if (!is.null(decomp)) {
+    etym  <- attr(decomp, "etymology")
+    frame <- decomp_frame(if (is.null(etym)) NA_character_ else etym$type)
+    hint  <- if (is.null(etym)) NA_character_ else etym$hint
+    has_tiles <- nrow(decomp) > 0
+
+    tile <- function(i) {
+      cp    <- decomp$component[[i]]
+      py    <- decomp$pinyin_toned[[i]]
+      py    <- if (!is.null(py) && !is.na(py) && nzchar(py)) py else NULL
+      rname <- decomp$radical_name[[i]]
+      defn  <- decomp$definition[[i]]
+      label <- if (!is.null(rname) && !is.na(rname) && nzchar(rname)) {
+        rname
+      } else if (!is.null(defn) && !is.na(defn) && nzchar(defn)) {
+        defn
+      } else {
+        NULL
+      }
+      role  <- if ("role" %in% names(decomp)) decomp$role[[i]] else NA_character_
+      badge <- if (isTRUE(frame$role_badges) && !is.na(role)) {
+        shiny::tags$span(frame$badge_labels[[role]],
+                         class = paste0("role-badge role-", role),
+                         title = frame$badge_tips[[role]])
+      }
+      shiny::div(
+        class = "decomp-tile text-center p-2",
+        shiny::tags$a(
+          href = "javascript:void(0)",
+          class = "hanzi-tile text-decoration-none text-body border",
+          cp,
+          onclick = sprintf(
+            "Shiny.setInputValue('modal_comp_click','%s',{priority:'event'})", cp
+          )
+        ),
+        if (!is.null(py)) shiny::tags$div(py, class = "small text-primary mt-1"),
+        if (!is.null(label)) shiny::tags$div(label, class = "small text-muted"),
+        badge
+      )
+    }
+
+    type_line <- if (!is.null(frame$title)) {
+      shiny::div(
+        class = "d-flex align-items-baseline gap-2 mb-1",
+        shiny::tags$span(frame$title, class = "decomp-type-title"),
+        shiny::tags$span(frame$subtitle, class = "decomp-subtitle")
+      )
+    }
+    howto <- if (!is.null(frame$how_to_read)) {
+      shiny::tags$p(frame$how_to_read, class = "decomp-how-to-read mb-2")
+    }
+    origin <- if (isTRUE(frame$show_origin) && !is.na(hint %||% NA) && nzchar(hint)) {
+      shiny::tags$p(shiny::tags$span(frame$origin_prefix, class = "fw-semibold"),
+                    hint, class = "decomp-origin small mb-2")
+    }
+    equation <- if (isTRUE(frame$meaning_equation) && nrow(decomp) > 1L) {
+      shiny::div(paste(decomp$component, collapse = " + "),
+                 class = "decomp-equation mb-2")
+    }
+    tiles <- if (has_tiles) {
+      shiny::div(class = "d-flex flex-wrap gap-3 p-1",
+                 lapply(seq_len(nrow(decomp)), tile))
+    }
+    footnote <- if (!is.null(frame$footnote) && has_tiles) {
+      shiny::tags$p(frame$footnote, class = "decomp-footnote small fst-italic mt-2 mb-0")
+    }
+
+    if (!is.null(type_line) || !is.null(origin) || !is.null(tiles)) {
+      shiny::div(
+        class = "mb-4",
+        shiny::tags$p(class = "text-muted text-uppercase small fw-semibold mb-2",
+                      "Composition"),
+        type_line, howto, origin, equation, tiles, footnote
+      )
+    }
+  }
+
   shiny::modalDialog(
     title = shiny::div(
       class = "d-flex align-items-baseline gap-3",
@@ -1039,11 +1031,11 @@ render_stats_modal <- function(char, stats) {
       shiny::tags$span("Character Info", class = "text-muted small")
     ),
     freq_ui,
-    etym_ui,
+    comp_ui,
     rad_ui,
     footer = shiny::modalButton("Close"),
     easyClose = TRUE,
-    size = "s"
+    size = "m"
   )
 }
 
@@ -1054,6 +1046,124 @@ char_tier <- function(rank) {
   else if (rank <=  800) list(label = "Common",    color = "primary")
   else if (rank <= 1500) list(label = "Standard",  color = "info")
   else                    list(label = "Rare",      color = "secondary")
+}
+
+word_tier <- function(rank) {
+  rank <- as.integer(rank %||% NA)
+  if (is.na(rank))         list(label = "Uncommon",  color = "secondary")
+  else if (rank <=  2000)  list(label = "Very common", color = "success")
+  else if (rank <=  8000)  list(label = "Common",      color = "primary")
+  else if (rank <= 20000)  list(label = "Occasional",  color = "info")
+  else                     list(label = "Rare",        color = "secondary")
+}
+
+# ---- Word stats -------------------------------------------------------------
+
+hanzi_word_stats <- function(word, con) {
+  esc <- function(s) gsub("'", "''", s)
+  freq <- DBI::dbGetQuery(con, sprintf(
+    "SELECT rank, count FROM word_frequency WHERE word = '%s' LIMIT 1", esc(word)))
+  entry <- DBI::dbGetQuery(con, sprintf(
+    "SELECT pinyin_toned, gloss FROM cedict WHERE simplified = '%s' ORDER BY id LIMIT 1",
+    esc(word)))
+  chars <- strsplit(word, "", fixed = TRUE)[[1]]
+  cdf <- enrich_components(
+    con,
+    data.frame(component = chars, is_intermediate = FALSE, stringsAsFactors = FALSE)
+  )
+  list(
+    freq  = if (nrow(freq) > 0) freq else NULL,
+    entry = if (nrow(entry) > 0) entry else NULL,
+    chars = cdf
+  )
+}
+
+render_word_modal <- function(word, stats) {
+  # Pinyin + gloss
+  head_ui <- if (!is.null(stats$entry)) {
+    shiny::div(
+      class = "mb-4",
+      shiny::tags$p(stats$entry$pinyin_toned[[1]],
+                    class = "fw-semibold text-primary mb-1"),
+      shiny::tags$p(convert_gloss_pinyin(stats$entry$gloss[[1]]),
+                    class = "text-muted small mb-0")
+    )
+  }
+
+  # Word frequency
+  freq_ui <- if (!is.null(stats$freq)) {
+    rank <- stats$freq$rank[[1]]
+    tier <- word_tier(rank)
+    shiny::div(
+      class = "mb-4",
+      shiny::tags$p(class = "text-muted text-uppercase small fw-semibold mb-2",
+                    "Word frequency"),
+      shiny::div(
+        class = "d-flex align-items-center gap-2",
+        shiny::tags$span(tier$label, class = paste0("badge text-bg-", tier$color)),
+        shiny::tags$span(sprintf("Rank #%s of the 50,000 most common words",
+                                 formatC(rank, big.mark = ",")),
+                         class = "text-muted small")
+      )
+    )
+  } else {
+    shiny::div(
+      class = "mb-4",
+      shiny::tags$p(class = "text-muted text-uppercase small fw-semibold mb-2",
+                    "Word frequency"),
+      shiny::tags$p("Not in the 50,000-word frequency list.",
+                    class = "text-muted small mb-0")
+    )
+  }
+
+  # Constituent characters (clickable -> each character's own modal)
+  cdf <- stats$chars
+  char_tile <- function(i) {
+    cp    <- cdf$component[[i]]
+    py    <- cdf$pinyin_toned[[i]]
+    py    <- if (!is.null(py) && !is.na(py) && nzchar(py)) py else NULL
+    defn  <- cdf$definition[[i]]
+    label <- if (!is.null(defn) && !is.na(defn) && nzchar(defn)) {
+      trimws(strsplit(defn, ";")[[1]][[1]])
+    } else {
+      NULL
+    }
+    shiny::div(
+      class = "decomp-tile text-center p-2",
+      shiny::tags$a(
+        href = "javascript:void(0)",
+        class = "hanzi-tile text-decoration-none text-body border",
+        cp,
+        onclick = sprintf(
+          "Shiny.setInputValue('char_stats_request','%s',{priority:'event'})",
+          gsub("'", "\\\\'", cp)
+        )
+      ),
+      if (!is.null(py)) shiny::tags$div(py, class = "small text-primary mt-1"),
+      if (!is.null(label)) shiny::tags$div(label, class = "small text-muted")
+    )
+  }
+  chars_ui <- shiny::div(
+    class = "mb-2",
+    shiny::tags$p(class = "text-muted text-uppercase small fw-semibold mb-2",
+                  "Characters"),
+    shiny::div(class = "d-flex flex-wrap gap-3 p-1",
+               lapply(seq_len(nrow(cdf)), char_tile))
+  )
+
+  shiny::modalDialog(
+    title = shiny::div(
+      class = "d-flex align-items-baseline gap-3",
+      shiny::tags$span(word, class = "hanzi-large"),
+      shiny::tags$span("Word Info", class = "text-muted small")
+    ),
+    head_ui,
+    freq_ui,
+    chars_ui,
+    footer = shiny::modalButton("Close"),
+    easyClose = TRUE,
+    size = "m"
+  )
 }
 
 # ---- Explore (frequency browser) --------------------------------------------

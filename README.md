@@ -1,6 +1,6 @@
 # shinyhanzi
 
-shinyhanzi is an interactive Shiny application for exploring Chinese characters (汉字). It provides animated stroke order, character decomposition, dictionary lookup with pinyin, English-to-Hanzi search, and frequency analysis. The package also exposes its underlying lookup functions so you can use them in your own R code.
+shinyhanzi is an interactive Shiny application for exploring Chinese characters (汉字). It provides animated stroke order, a type-aware breakdown of each character into its meaningful components (semantic and phonetic parts, with etymology), dictionary lookup with pinyin, English-to-Hanzi search, and frequency analysis. The package also exposes its underlying lookup functions so you can use them in your own R code.
 
 ## Installation
 
@@ -60,15 +60,19 @@ hanzi_search("good", n = 3)
 #> 3 美         美          měi          beautiful / very satisfac…  1.96       151
 ```
 
-### Decompose a character
+### Break a character into its meaningful components
+
+Returns the parts that carry meaning or sound — the 形符 (semantic) and 聲符
+(phonetic) of a phono-semantic character, or the components named in its
+etymology — never the raw stroke split.
 
 ``` r
-hanzi_decompose("好")
-#> # A tibble: 2 × 5
-#>   component is_intermediate definition                 radical_name pinyin_toned
-#>   <chr>     <lgl>           <chr>                      <chr>        <chr>
-#> 1 女        FALSE           woman, girl; female        woman        nǚ
-#> 2 子        FALSE           son, child; seed, egg; fr… child        zi
+hanzi_decompose("清")
+#> # A tibble: 2 × 6
+#>   component is_intermediate role     definition          radical_name pinyin_toned
+#>   <chr>     <lgl>           <chr>    <chr>               <chr>        <chr>
+#> 1 氵        FALSE           semantic water               water        shuǐ
+#> 2 青        FALSE           phonetic nature's color; bl… green / blue qīng
 ```
 
 ### Find where a component appears

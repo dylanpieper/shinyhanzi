@@ -49,6 +49,64 @@
   opacity: 0.6;
 }
 
+/* ---- Type-aware decomposition framing ---- */
+
+.decomp-type-title {
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.decomp-subtitle {
+  color: #6b6b5a;
+  font-size: 0.85rem;
+}
+
+.decomp-how-to-read {
+  color: #555;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.decomp-origin {
+  color: #555;
+}
+
+.decomp-equation {
+  font-size: 1.1rem;
+  color: #1a1a1a;
+}
+
+.decomp-footnote {
+  color: #8a8a7a;
+}
+
+.decomp-graphical > summary {
+  cursor: pointer;
+  color: #6b6b5a;
+  font-size: 0.85rem;
+}
+
+.role-badge {
+  display: inline-block;
+  margin-top: 0.25rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.role-semantic {
+  background-color: rgba(139, 26, 26, 0.1);
+  color: #8b1a1a;
+}
+
+.role-phonetic {
+  background-color: rgba(107, 107, 90, 0.15);
+  color: #5a5a48;
+}
+
 /* ---- Search result items ---- */
 
 .search-result-item:last-child {
