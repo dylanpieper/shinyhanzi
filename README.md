@@ -11,7 +11,7 @@ pak::pak("dylanpieper/shinyhanzi")
 
 ## Getting started
 
-shinyhanzi requires a database (114 MB) that is downloaded separately. Download it once and it will be cached for all future sessions:
+shinyhanzi requires a database (99 MB) that is downloaded separately. Download it once and it will be cached for all future sessions:
 
 ``` r
 library(shinyhanzi)

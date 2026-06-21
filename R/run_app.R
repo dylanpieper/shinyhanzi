@@ -1179,9 +1179,10 @@ browse_ui <- function(id) {
       shiny::actionButton(ns("next_page"), NULL, icon = shiny::icon("chevron-right"),
                           class = "btn-sm btn-outline-secondary"),
       shiny::textOutput(ns("page_info"), inline = TRUE),
+      shiny::uiOutput(ns("mode_toggle"), class = "ms-auto", inline = TRUE),
       shiny::actionButton(ns("toggle_order"), NULL,
                           icon  = shiny::icon("arrow-down-1-9"),
-                          class = "btn-sm btn-outline-secondary ms-auto",
+                          class = "btn-sm btn-outline-secondary",
                           title = "Toggle order")
     ),
     shiny::uiOutput(ns("rows"))
@@ -1193,35 +1194,88 @@ browse_server <- function(id, navigate, con, session_parent) {
     PAGE    <- 5L
     page    <- shiny::reactiveVal(1L)
     desc    <- shiny::reactiveVal(FALSE)
+    word_mode <- shiny::reactiveVal(FALSE)
 
-    total   <- DBI::dbGetQuery(con,
-      "SELECT COUNT(*) FROM char_frequency cf
-       WHERE EXISTS (SELECT 1 FROM cedict WHERE simplified = cf.char AND gloss IS NOT NULL)"
-    )[[1]]
-    n_pages <- ceiling(total / PAGE)
+    total <- shiny::reactive({
+      if (word_mode()) {
+        DBI::dbGetQuery(con,
+          "SELECT COUNT(*) FROM word_frequency wf
+           WHERE EXISTS (SELECT 1 FROM cedict WHERE simplified = wf.word AND gloss IS NOT NULL)"
+        )[[1]]
+      } else {
+        DBI::dbGetQuery(con,
+          "SELECT COUNT(*) FROM char_frequency cf
+           WHERE EXISTS (SELECT 1 FROM cedict WHERE simplified = cf.char AND gloss IS NOT NULL)"
+        )[[1]]
+      }
+    })
+    n_pages <- shiny::reactive(ceiling(total() / PAGE))
 
     browse_data <- shiny::reactive({
       offset <- (page() - 1L) * PAGE
       dir    <- if (desc()) "DESC" else "ASC"
-      DBI::dbGetQuery(con, sprintf(
-        "SELECT cf.rank, cf.char, cf.cumulative_pct,
-                (SELECT pinyin_toned FROM cedict
-                 WHERE simplified = cf.char ORDER BY id LIMIT 1) AS pinyin_toned,
-                (SELECT gloss FROM cedict
-                 WHERE simplified = cf.char ORDER BY id LIMIT 1) AS gloss
-         FROM char_frequency cf
-         WHERE EXISTS (SELECT 1 FROM cedict WHERE simplified = cf.char AND gloss IS NOT NULL)
-         ORDER BY cf.rank %s
-         LIMIT %d OFFSET %d",
-        dir, PAGE, offset
-      ))
+      if (word_mode()) {
+        DBI::dbGetQuery(con, sprintf(
+          "SELECT wf.rank, wf.word AS char,
+                  (SELECT pinyin_toned FROM cedict
+                   WHERE simplified = wf.word ORDER BY id LIMIT 1) AS pinyin_toned,
+                  (SELECT gloss FROM cedict
+                   WHERE simplified = wf.word ORDER BY id LIMIT 1) AS gloss
+           FROM word_frequency wf
+           WHERE EXISTS (SELECT 1 FROM cedict WHERE simplified = wf.word AND gloss IS NOT NULL)
+           ORDER BY wf.rank %s
+           LIMIT %d OFFSET %d",
+          dir, PAGE, offset
+        ))
+      } else {
+        DBI::dbGetQuery(con, sprintf(
+          "SELECT cf.rank, cf.char,
+                  (SELECT pinyin_toned FROM cedict
+                   WHERE simplified = cf.char ORDER BY id LIMIT 1) AS pinyin_toned,
+                  (SELECT gloss FROM cedict
+                   WHERE simplified = cf.char ORDER BY id LIMIT 1) AS gloss
+           FROM char_frequency cf
+           WHERE EXISTS (SELECT 1 FROM cedict WHERE simplified = cf.char AND gloss IS NOT NULL)
+           ORDER BY cf.rank %s
+           LIMIT %d OFFSET %d",
+          dir, PAGE, offset
+        ))
+      }
+    })
+
+    output$mode_toggle <- shiny::renderUI({
+      w <- word_mode()
+      btn <- function(label, val, active) {
+        shiny::tags$button(
+          type = "button",
+          class = paste("btn btn-sm",
+                        if (active) "btn-primary" else "btn-outline-secondary"),
+          onclick = sprintf("Shiny.setInputValue('%s', %s, {priority:'event'})",
+                            session$ns("set_word_mode"), tolower(as.character(val))),
+          label
+        )
+      }
+      shiny::div(
+        class = "btn-group", role = "group",
+        btn("Characters", FALSE, !w),
+        btn("Words", TRUE, w)
+      )
+    })
+
+    shiny::observeEvent(input$set_word_mode, {
+      w <- isTRUE(input$set_word_mode)
+      if (w != word_mode()) {
+        word_mode(w)
+        page(1L)
+      }
     })
 
     output$page_info <- shiny::renderText({
       p   <- page()
       dir <- desc()
-      r1  <- if (!dir) (p - 1L) * PAGE + 1L else total - (p - 1L) * PAGE
-      r2  <- if (!dir) min(p * PAGE, total)  else max(total - p * PAGE + 1L, 1L)
+      tot <- total()
+      r1  <- if (!dir) (p - 1L) * PAGE + 1L else tot - (p - 1L) * PAGE
+      r2  <- if (!dir) min(p * PAGE, tot)  else max(tot - p * PAGE + 1L, 1L)
       sprintf("Rank %s\u2013%s", formatC(min(r1,r2), big.mark=","), formatC(max(r1,r2), big.mark=","))
     })
 
@@ -1233,13 +1287,14 @@ browse_server <- function(id, navigate, con, session_parent) {
     })
 
     shiny::observeEvent(input$prev_page, { if (page() > 1L) page(page() - 1L) })
-    shiny::observeEvent(input$next_page, { if (page() < n_pages) page(page() + 1L) })
+    shiny::observeEvent(input$next_page, { if (page() < n_pages()) page(page() + 1L) })
 
     output$rows <- shiny::renderUI({
       d <- browse_data()
+      w <- word_mode()
       lapply(seq_len(nrow(d)), function(i) {
         row  <- d[i, ]
-        tier <- char_tier(row$rank)
+        tier <- if (w) word_tier(row$rank) else char_tier(row$rank)
         # First semicolon-delimited sense only, truncated
         gloss <- if (!is.na(row$gloss %||% NA)) {
           g <- trimws(strsplit(row$gloss, ";")[[1L]][[1L]])
@@ -1253,7 +1308,8 @@ browse_server <- function(id, navigate, con, session_parent) {
           shiny::tags$span(paste0("#", row$rank),
                            class = "text-muted",
                            style = "font-size:0.7rem; width:2.8rem; flex-shrink:0;"),
-          shiny::tags$span(row$char, class = "hanzi-tile border"),
+          shiny::tags$span(row$char,
+                           class = paste("border", if (w) "hanzi-tile-word" else "hanzi-tile")),
           shiny::div(
             class = "flex-grow-1 min-width-0",
             shiny::div(

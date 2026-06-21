@@ -82,15 +82,15 @@ decomp_frame <- function(type) {
     list(
       mode        = "phonosemantic",
       title       = "Phono-semantic compound",
-      subtitle    = "形聲 xíngshēng",
+      subtitle    = "\u5f62\u8072 x\u00edngsh\u0113ng",
       how_to_read = "One part points to the meaning, the other to the sound.",
       role_badges = TRUE,
       show_origin = FALSE,
       meaning_equation = FALSE,
       badge_labels = c(semantic = "meaning", phonetic = "sound"),
       badge_tips   = c(
-        semantic = "形符 — the semantic part, hinting at what it means",
-        phonetic = "聲符 — the phonetic part, hinting at how it sounds"
+        semantic = "\u5f62\u7b26 \u2014 the semantic part, hinting at what it means",
+        phonetic = "\u8072\u7b26 \u2014 the phonetic part, hinting at how it sounds"
       ),
       footnote = paste(
         "Sound hints reflect older pronunciations and may have drifted in",
@@ -102,9 +102,9 @@ decomp_frame <- function(type) {
     list(
       mode        = "ideographic",
       title       = "Ideographic character",
-      subtitle    = "會意 huìyì · 指事 zhǐshì",
+      subtitle    = "\u6703\u610f hu\u00ecy\u00ec \u00b7 \u6307\u4e8b zh\u01d0sh\u00ec",
       how_to_read = paste(
-        "The meaning is built from the parts themselves — there's no",
+        "The meaning is built from the parts themselves \u2014 there's no",
         "sound clue here."
       ),
       role_badges = FALSE,
@@ -116,8 +116,8 @@ decomp_frame <- function(type) {
     list(
       mode        = "pictograph",
       title       = "Pictograph",
-      subtitle    = "象形 xiàngxíng",
-      how_to_read = "This character began as a picture — read it as a whole.",
+      subtitle    = "\u8c61\u5f62 xi\u00e0ngx\u00edng",
+      how_to_read = "This character began as a picture \u2014 read it as a whole.",
       role_badges = FALSE,
       show_origin = TRUE,
       meaning_equation = FALSE,
