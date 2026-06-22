@@ -244,17 +244,15 @@ parse_cjk_decomp <- function(path) {
     ch          <- nfc(match[[2]])
     decomp_type <- match[[3]]
     comp_str    <- match[[4]]
-    is_inter    <- is_intermediate_token(match[[2]])
 
     if (!nzchar(comp_str)) {
       data.frame(char = ch, decomp_type = decomp_type, comp_index = 0L,
-                 component = NA_character_, is_intermediate = is_inter,
+                 component = NA_character_,
                  stringsAsFactors = FALSE)
     } else {
       comps <- nfc(strsplit(comp_str, ",", fixed = TRUE)[[1]])
       data.frame(char = ch, decomp_type = decomp_type,
                  comp_index = seq_along(comps), component = comps,
-                 is_intermediate = is_inter | is_intermediate_token(comps),
                  stringsAsFactors = FALSE)
     }
   }))
@@ -332,7 +330,7 @@ build_word_chars_table <- function(con) {
 build_components_table <- function(con) {
   decomp <- DBI::dbGetQuery(
     con,
-    "SELECT char, comp_index, component, is_intermediate
+    "SELECT char, comp_index, component
      FROM decomposition WHERE component IS NOT NULL AND comp_index > 0"
   )
 
@@ -367,19 +365,23 @@ build_components_table <- function(con) {
     direct    <- unique(adj[[ch]] %||% character(0))
     direct    <- direct[!is.na(direct)]
     graphical <- expand_char(ch)
+
+    # cjk-decomp uses non-Unicode 5-digit tokens as intermediate graph nodes.
+    # They are needed to traverse the decomposition tree (above) but carry no
+    # displayable meaning, so they are never stored as components.
+    direct    <- direct[!is_intermediate_token(direct)]
+    graphical <- graphical[!is_intermediate_token(graphical)]
     rad_lvl   <- direct[direct %in% radicals_set]
 
     parts <- compact(list(
       if (length(direct) > 0)
         data.frame(char = ch, component = direct, level = "once",
-                   is_intermediate = is_intermediate_token(direct),
                    stringsAsFactors = FALSE),
       if (length(rad_lvl) > 0)
         data.frame(char = ch, component = rad_lvl, level = "radical",
-                   is_intermediate = FALSE, stringsAsFactors = FALSE),
+                   stringsAsFactors = FALSE),
       if (length(graphical) > 0)
         data.frame(char = ch, component = graphical, level = "graphical",
-                   is_intermediate = is_intermediate_token(graphical),
                    stringsAsFactors = FALSE)
     ))
     if (!length(parts)) return(NULL)

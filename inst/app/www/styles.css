@@ -59,14 +59,6 @@
   font-size: 1.5rem;
 }
 
-/* ---- Decomposition tiles ---- */
-
-.hanzi-intermediate {
-  font-family: "HanaMinA", "Hanazono", serif;
-  pointer-events: none;
-  opacity: 0.6;
-}
-
 /* ---- Type-aware decomposition framing ---- */
 
 .decomp-type-title {
@@ -188,12 +180,4 @@
 .navbar-brand {
   font-size: 1.25rem;
   letter-spacing: -0.01em;
-}
-
-/* ---- Hanazono font for intermediate components ---- */
-
-@font-face {
-  font-family: "HanaMinA";
-  src: url("fonts/HanaMinA.ttf") format("truetype");
-  font-display: swap;
 }

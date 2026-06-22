@@ -68,11 +68,11 @@ etymology — never the raw stroke split.
 
 ``` r
 hanzi_decompose("清")
-#> # A tibble: 2 × 6
-#>   component is_intermediate role     definition          radical_name pinyin_toned
-#>   <chr>     <lgl>           <chr>    <chr>               <chr>        <chr>
-#> 1 氵        FALSE           semantic water               water        shuǐ
-#> 2 青        FALSE           phonetic nature's color; bl… green / blue qīng
+#> # A tibble: 2 × 5
+#>   component role     definition                        radical_name pinyin_toned
+#>   <chr>     <chr>    <chr>                             <chr>        <chr>
+#> 1 氵        semantic water                             water        shuǐ
+#> 2 青        phonetic nature's color; blue, green, bla… green / blue qīng
 ```
 
 ### Find where a component appears

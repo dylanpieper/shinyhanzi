@@ -379,7 +379,7 @@ app_server <- function(con) {
         return()
       }
       stats  <- hanzi_char_stats(ch, con)
-      decomp <- hanzi_decompose(ch, "once", con)
+      decomp <- hanzi_decompose(ch, con)
       shiny::showModal(render_stats_modal(ch, stats, decomp))
     })
 
@@ -390,7 +390,7 @@ app_server <- function(con) {
       shiny::req(!is.null(tok) && nzchar(tok))
       if (nchar(tok) == 1L) {
         shiny::showModal(render_stats_modal(
-          tok, hanzi_char_stats(tok, con), hanzi_decompose(tok, "once", con)
+          tok, hanzi_char_stats(tok, con), hanzi_decompose(tok, con)
         ))
       } else {
         shiny::showModal(render_word_modal(tok, hanzi_word_stats(tok, con)))

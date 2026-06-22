@@ -44,21 +44,15 @@ enrich_components <- function(con, df) {
 #' returned — it carries no reliable meaning or sound and can mislead learners.
 #'
 #' @param char A single Chinese character.
-#' @param level One of `"once"` (the character's meaningful components — the
-#'   semantic/phonetic parts of a phono-semantic character, or the components
-#'   named in its etymology), `"radical"`, or `"graphical"` (structural
-#'   breakdown from the `components` table).
 #' @param con A DuckDB connection from [hanzi_db()].
-#' @return A data frame with columns `component`, `is_intermediate`, `definition`
+#' @return A data frame with columns `component`, `definition`
 #'   (component gloss), `radical_name` (if the component is a Kangxi radical), and
 #'   `role` (`"semantic"`/`"phonetic"` for the 形符/聲符 of a phono-semantic
 #'   character, otherwise `NA`). The character's etymology is attached as an
 #'   attribute `attr(., "etymology")`: a list with `type`, `semantic`,
 #'   `phonetic`, and `hint`.
 #' @export
-hanzi_decompose <- function(char, level = c("once", "radical", "graphical"),
-                             con = hanzi_db()) {
-  level <- match.arg(level)
+hanzi_decompose <- function(char, con = hanzi_db()) {
   stopifnot(is.character(char), length(char) == 1L)
   char <- nfc(char)
 
@@ -80,37 +74,25 @@ hanzi_decompose <- function(char, level = c("once", "radical", "graphical"),
          phonetic = NA_character_, hint = NA_character_)
   }
 
-  if (level == "once") {
-    # Meaningful components only — never the raw stroke split. Phono-semantic
-    # characters use their 形符/聲符 fields; everything else uses the components
-    # named in the etymology hint (e.g. 儿 + 火 for 光).
-    if (!is.na(etym$type) && etym$type == "pictophonetic" &&
-        (!is.na(etym$semantic) || !is.na(etym$phonetic))) {
-      parts <- c(semantic = etym$semantic, phonetic = etym$phonetic)
-      parts <- parts[!is.na(parts)]
-      comps <- data.frame(
-        component        = unname(parts),
-        is_intermediate  = rep(FALSE, length(parts)),
-        role             = names(parts),
-        stringsAsFactors = FALSE
-      )
-    } else {
-      parts <- setdiff(hint_components(etym$hint), char)
-      comps <- data.frame(
-        component        = parts,
-        is_intermediate  = rep(FALSE, length(parts)),
-        role             = rep(NA_character_, length(parts)),
-        stringsAsFactors = FALSE
-      )
-    }
+  # Meaningful components only — never the raw stroke split. Phono-semantic
+  # characters use their 形符/聲符 fields; everything else uses the components
+  # named in the etymology hint (e.g. 儿 + 火 for 光).
+  if (!is.na(etym$type) && etym$type == "pictophonetic" &&
+      (!is.na(etym$semantic) || !is.na(etym$phonetic))) {
+    parts <- c(semantic = etym$semantic, phonetic = etym$phonetic)
+    parts <- parts[!is.na(parts)]
+    comps <- data.frame(
+      component        = unname(parts),
+      role             = names(parts),
+      stringsAsFactors = FALSE
+    )
   } else {
-    comps <- tbl(con, "components") |>
-      filter(.data$char == !!char, .data$level == !!level,
-             !is.na(.data$component), .data$is_intermediate == FALSE) |>
-      select("component", "is_intermediate") |>
-      distinct() |>
-      collect()
-    comps$role <- NA_character_
+    parts <- setdiff(hint_components(etym$hint), char)
+    comps <- data.frame(
+      component        = parts,
+      role             = rep(NA_character_, length(parts)),
+      stringsAsFactors = FALSE
+    )
   }
 
   if (nrow(comps) == 0) {
@@ -144,7 +126,7 @@ hanzi_components_of <- function(component, level = NULL, con = hanzi_db()) {
   if (!is.null(level)) q <- filter(q, .data$level == !!level)
 
   chars <- q |>
-    filter(!is.na(.data$char), .data$is_intermediate == FALSE) |>
+    filter(!is.na(.data$char)) |>
     select("char") |>
     distinct() |>
     collect()

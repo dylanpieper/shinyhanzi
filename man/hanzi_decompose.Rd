@@ -4,24 +4,15 @@
 \alias{hanzi_decompose}
 \title{Break a Chinese character into its meaningful components}
 \usage{
-hanzi_decompose(
-  char,
-  level = c("once", "radical", "graphical"),
-  con = hanzi_db()
-)
+hanzi_decompose(char, con = hanzi_db())
 }
 \arguments{
 \item{char}{A single Chinese character.}
 
-\item{level}{One of \code{"once"} (the character's meaningful components — the
-semantic/phonetic parts of a phono-semantic character, or the components
-named in its etymology), \code{"radical"}, or \code{"graphical"} (structural
-breakdown from the \code{components} table).}
-
 \item{con}{A DuckDB connection from \code{\link[=hanzi_db]{hanzi_db()}}.}
 }
 \value{
-A data frame with columns \code{component}, \code{is_intermediate}, \code{definition}
+A data frame with columns \code{component}, \code{definition}
 (component gloss), \code{radical_name} (if the component is a Kangxi radical), and
 \code{role} (\code{"semantic"}/\code{"phonetic"} for the 形符/聲符 of a phono-semantic
 character, otherwise \code{NA}). The character's etymology is attached as an

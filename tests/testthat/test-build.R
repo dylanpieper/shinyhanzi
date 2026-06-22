@@ -56,12 +56,11 @@ test_that("parse_cedict parses entries correctly", {
   expect_false(you_row$is_word[[1]])
 })
 
-test_that("parse_cjk_decomp handles atoms and intermediates", {
+test_that("parse_cjk_decomp handles atoms and components", {
   fixture <- paste(
     "一:a()",
     "好:c(女,子)",
     "有:c(𠂇,月)",
-    "00001:p(一,丨)",
     sep = "\n"
   )
   tmp <- tempfile(fileext = ".txt")
@@ -70,18 +69,18 @@ test_that("parse_cjk_decomp handles atoms and intermediates", {
 
   df <- shinyhanzi:::parse_cjk_decomp(tmp)
 
-  expect_true("char"            %in% names(df))
-  expect_true("comp_index"      %in% names(df))
-  expect_true("is_intermediate" %in% names(df))
+  expect_true("char"       %in% names(df))
+  expect_true("comp_index" %in% names(df))
+  expect_false("is_intermediate" %in% names(df))
 
   # Atom: 一 has comp_index == 0 and no component
   yi <- df[df$char == "一", ]
   expect_equal(yi$comp_index[[1]], 0L)
   expect_true(is.na(yi$component[[1]]))
 
-  # Intermediate token
-  inter <- df[df$char == "00001", ]
-  expect_true(all(inter$is_intermediate))
+  # 好 decomposes into 女 + 子
+  hao <- df[df$char == "好", ]
+  expect_setequal(hao$component, c("女", "子"))
 })
 
 test_that("numbered_to_toned converts correctly", {
