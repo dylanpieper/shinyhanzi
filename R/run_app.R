@@ -896,6 +896,19 @@ hanzi_char_stats <- function(char, con) {
 }
 
 render_stats_modal <- function(char, stats, decomp = NULL) {
+  # Definition (makemeahanzi) — the character's core meaning, shown at the top.
+  def_ui <- if (!is.null(stats$info) &&
+                !is.na(stats$info$definition[[1]]) &&
+                nzchar(stats$info$definition[[1]])) {
+    shiny::div(
+      class = "mb-4",
+      shiny::tags$p(class = "text-muted text-uppercase small fw-semibold mb-2",
+                    "Definition"),
+      shiny::tags$p(convert_gloss_pinyin(stats$info$definition[[1]]),
+                    class = "mb-0")
+    )
+  }
+
   # Frequency section
   freq_ui <- if (!is.null(stats$freq)) {
     rank     <- stats$freq$rank[[1]]
@@ -1030,6 +1043,7 @@ render_stats_modal <- function(char, stats, decomp = NULL) {
       shiny::tags$span(char, class = "hanzi-large"),
       shiny::tags$span("Character Info", class = "text-muted small")
     ),
+    def_ui,
     freq_ui,
     comp_ui,
     rad_ui,
